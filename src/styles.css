@@ -93,6 +93,11 @@ button:hover:not(:disabled) {
   background: #1d4ed8;
 }
 
+.secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
 .player-list,
 .pair-list,
 .history-grid {
@@ -188,6 +193,24 @@ button:hover:not(:disabled) {
 .bye-text {
   color: #475569;
   font-weight: 600;
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.standings-table th,
+.standings-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.standings-table th {
+  color: #475569;
+  font-size: 0.95rem;
 }
 
 @media (max-width: 680px) {

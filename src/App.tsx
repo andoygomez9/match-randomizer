@@ -11,6 +11,7 @@ import {
   Team,
   MatchRound,
 } from './utils/pairing';
+import { computeStandings } from './utils/pairing';
 
 function formatDate(dateString: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -50,6 +51,8 @@ function App() {
   const lastRound = rounds[0] ?? null;
   const lastRoundComplete = lastRound ? isRoundComplete(lastRound) : false;
   const canGenerateFirstRound = players.length >= 4 && players.length % 2 === 0;
+
+  const standings = useMemo(() => computeStandings(rounds), [rounds]);
 
   const handleAddPlayer = () => {
     const name = nameInput.trim();
@@ -121,12 +124,73 @@ function App() {
 
   const nextRoundDisabled = rounds.length > 0 && !lastRoundComplete;
 
+  const handleResetAll = () => {
+    if (!window.confirm('Reset all players and rounds? This cannot be undone.')) return;
+    setPlayers([]);
+    setRounds([]);
+    savePlayers([]);
+    saveRounds([]);
+    setError('');
+  };
+
+  const handleExportCSV = () => {
+    const standings = computeStandings(rounds);
+    if (standings.length === 0) {
+      setError('No standings to export.');
+      return;
+    }
+
+    const header = ['Player', 'Played', 'Wins', 'Losses'];
+    const rows = standings.map((s) => [s.name, String(s.played), String(s.wins), String(s.losses)]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'standings.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="app-shell">
       <header>
         <h1>Pickleball Doubles Match Randomizer</h1>
         <p>Encode all players, generate doubles matches, and advance winners against winners.</p>
       </header>
+
+      <section className="panel">
+        <h2>Standings</h2>
+        {standings.length > 0 ? (
+          <table className="standings-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Played</th>
+                <th>Wins</th>
+                <th>Losses</th>
+              </tr>
+            </thead>
+            <tbody>
+              {standings.map((s) => (
+                <tr key={s.playerId}>
+                  <td>{s.name}</td>
+                  <td>{s.played}</td>
+                  <td>{s.wins}</td>
+                  <td>{s.losses}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p>No completed matches yet.</p>
+        )}
+      </section>
 
       <section className="panel">
         <div className="panel-row">
@@ -161,9 +225,17 @@ function App() {
         </div>
 
         <div className="panel-row action-row">
-          <button type="button" onClick={nextRoundAction} disabled={!canGenerateFirstRound || nextRoundDisabled}>
-            {rounds.length === 0 ? 'Generate First Round' : 'Generate Next Round'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={nextRoundAction} disabled={!canGenerateFirstRound || nextRoundDisabled}>
+              {rounds.length === 0 ? 'Generate First Round' : 'Generate Next Round'}
+            </button>
+            <button type="button" className="secondary" onClick={handleExportCSV}>
+              Export Standings CSV
+            </button>
+            <button type="button" className="secondary" onClick={handleResetAll}>
+              Reset All
+            </button>
+          </div>
           <span className="hint">
             {rounds.length === 0
               ? 'Add at least 4 players and use an even count for doubles.'
@@ -222,6 +294,7 @@ function App() {
           <p>No rounds generated yet.</p>
         )}
       </section>
+      
 
       <section className="panel">
         <h2>Round History</h2>

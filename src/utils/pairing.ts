@@ -273,3 +273,55 @@ export function saveRounds(rounds: MatchRound[]) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(STORAGE_ROUNDS_KEY, JSON.stringify(rounds));
 }
+
+export type PlayerStanding = {
+  playerId: string;
+  name: string;
+  wins: number;
+  losses: number;
+  played: number;
+};
+
+export function computeStandings(rounds: MatchRound[]): PlayerStanding[] {
+  const map: Record<string, PlayerStanding> = {};
+
+  rounds.forEach((round) => {
+    round.matches.forEach((match) => {
+      // Bye: teamA advances and counts as a win
+      if (!match.teamB) {
+        match.teamA.playerIds.forEach((pid, idx) => {
+          const name = match.teamA.playerNames[idx];
+          if (!map[pid]) map[pid] = { playerId: pid, name, wins: 0, losses: 0, played: 0 };
+          map[pid].wins += 1;
+          map[pid].played += 1;
+        });
+        return;
+      }
+
+      if (match.result === null) return; // skip unfinished
+
+      const winners = match.result === 'A' ? match.teamA : match.teamB!;
+      const losers = match.result === 'A' ? match.teamB! : match.teamA;
+
+      winners.playerIds.forEach((pid, idx) => {
+        const name = winners.playerNames[idx];
+        if (!map[pid]) map[pid] = { playerId: pid, name, wins: 0, losses: 0, played: 0 };
+        map[pid].wins += 1;
+        map[pid].played += 1;
+      });
+
+      losers.playerIds.forEach((pid, idx) => {
+        const name = losers.playerNames[idx];
+        if (!map[pid]) map[pid] = { playerId: pid, name, wins: 0, losses: 0, played: 0 };
+        map[pid].losses += 1;
+        map[pid].played += 1;
+      });
+    });
+  });
+
+  return Object.values(map).sort((a, b) => {
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (a.losses !== b.losses) return a.losses - b.losses;
+    return b.played - a.played;
+  });
+}
